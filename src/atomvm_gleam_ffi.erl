@@ -1,4 +1,4 @@
--module(gleam_atomvm).
+-module(atomvm_gleam_ffi).
 
 -export([start_with_result/0, set_pin_mode_with_result/2, digital_write_with_result/2]).
 

@@ -9,8 +9,8 @@ pub type Level {
   High
 }
 
-@external(erlang, "atomvm_gleam", "set_pin_mode_with_result")
+@external(erlang, "atomvm_gleam_ffi", "set_pin_mode_with_result")
 pub fn set_pin_mode(pin: Int, direction: Direction) -> Result(Int, Nil)
 
-@external(erlang, "atomvm_gleam", "digital_write_with_result")
+@external(erlang, "atomvm_gleam_ffi", "digital_write_with_result")
 pub fn digital_write(pin: Int, level: Level) -> Result(Int, Nil)
