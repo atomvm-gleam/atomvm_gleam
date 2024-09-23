@@ -2,6 +2,9 @@
 
 -export([start_with_result/0, set_pin_mode_with_result/2, digital_write_with_result/2]).
 
+
+% GPIO --------------------------------------------------------------------
+
 start_with_result() ->
     case gpio:start() of
         ok -> {ok, nil};
