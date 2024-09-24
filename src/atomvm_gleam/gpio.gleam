@@ -9,6 +9,9 @@ pub type Level {
   High
 }
 
+// @external(erlang, "atomvm_gleam_ffi", "start_with_result")
+// pub fn start() -> Result(Int, Nil)
+
 @external(erlang, "atomvm_gleam_ffi", "set_pin_mode_with_result")
 pub fn set_pin_mode(pin: Int, direction: Direction) -> Result(Int, Nil)
 
