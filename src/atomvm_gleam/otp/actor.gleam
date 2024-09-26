@@ -136,11 +136,10 @@
 //
 
 import atomvm_gleam/otp/system.{
-  type DebugState, type Mode, type StatusInfo, type SystemMessage, GetState,
-  GetStatus, Resume, Running, StatusInfo, Suspend, Suspended,
+  type Mode, type SystemMessage, GetState, GetStatus, Resume, Running, Suspend,
+  Suspended,
 }
 import gleam/dynamic.{type Dynamic}
-import gleam/erlang/atom
 import gleam/erlang/charlist.{type Charlist}
 import gleam/erlang/process.{
   type ExitReason, type Pid, type Selector, type Subject, Abnormal,
@@ -221,8 +220,8 @@ type Self(state, msg) {
     /// The selector that actor is currently using to reveive messages. This
     /// can be changed by the `Next` value returned by the actor's `loop` callback.
     selector: Selector(Message(msg)),
-    /// An opaque value used by the OTP system debug APIs.
-    debug_state: DebugState,
+    // /// An opaque value used by the OTP system debug APIs.
+    // debug_state: DebugState,
     /// The message handling code provided by the programmer.
     message_handler: fn(msg, state) -> Next(msg, state),
   )
@@ -264,12 +263,11 @@ fn exit_process(reason: ExitReason) -> ExitReason {
 fn receive_message(self: Self(state, msg)) -> Message(msg) {
   let selector = case self.mode {
     // When suspended we only respond to system messages
-    Suspended ->
-      process.new_selector()
-      |> selecting_system_messages
-
+    // Suspended ->
+    //   process.new_selector()
+    //   |> selecting_system_messages
     // When running we respond to all messages
-    Running ->
+    Running | Suspended ->
       // The actor needs to handle various different messages:
       //
       // - OTP system messages. These are handled by the actor for the
@@ -286,34 +284,12 @@ fn receive_message(self: Self(state, msg)) -> Message(msg) {
       process.new_selector()
       |> process.selecting_anything(Unexpected)
       |> process.merge_selector(self.selector)
-      |> selecting_system_messages
   }
 
   process.select_forever(selector)
 }
 
-fn selecting_system_messages(
-  selector: Selector(Message(msg)),
-) -> Selector(Message(msg)) {
-  selector
-  |> process.selecting_record3(
-    atom.create_from_string("system"),
-    convert_system_message,
-  )
-}
-
-@external(erlang, "atomvm_gleam_ffi", "convert_system_message")
-fn convert_system_message(a: Dynamic, b: Dynamic) -> Message(msg)
-
-fn process_status_info(self: Self(state, msg)) -> StatusInfo {
-  StatusInfo(
-    module: atom.create_from_string("atomvm_gleam@otp@actor"),
-    parent: self.parent,
-    mode: self.mode,
-    debug_state: self.debug_state,
-    state: dynamic.from(self.state),
-  )
-}
+// FIXME: Add back fn (selecting_system_messages, convert_system_message) for Atom VM
 
 fn loop(self: Self(state, msg)) -> ExitReason {
   case receive_message(self) {
@@ -333,8 +309,8 @@ fn loop(self: Self(state, msg)) -> ExitReason {
           callback()
           loop(Self(..self, mode: Suspended))
         }
-        GetStatus(callback) -> {
-          callback(process_status_info(self))
+        GetStatus(_callback) -> {
+          // callback(process_status_info(self))
           loop(self)
         }
       }
@@ -388,6 +364,7 @@ fn initialise_actor(
     // Init was OK, send the subject to the parent and start handling messages.
     Ready(state, selector) -> {
       let selector = init_selector(subject, selector)
+
       // Signal to parent that the process has initialised successfully
       process.send(ack, Ok(subject))
       // Start message receive loop
@@ -398,7 +375,7 @@ fn initialise_actor(
           subject: subject,
           selector: selector,
           message_handler: spec.loop,
-          debug_state: system.debug_state([]),
+          // debug_state: system.NoDebug,
           mode: Running,
         )
       loop(self)
@@ -497,7 +474,7 @@ pub fn start_spec(spec: Spec(state, msg)) -> Result(Subject(msg), StartError) {
 
   // Remove the monitor used for the starting of the actor as to avoid an extra
   // message arriving at the parent if the child dies later.
-  process.demonitor_process(monitor)
+  // process.demonitor_process(monitor)
 
   result
 }
